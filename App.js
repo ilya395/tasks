@@ -6,8 +6,10 @@ import { ALL_ACTIVE_TASKS, MY_TASKS, ADD_TASKS } from './constants/index.js'
 import { getMainMenu } from './utils/keyboards.js'
 
 export const App = () => {
+    const bigTask = {}
+    
     Bot.start((ctx) => {
-        ctx.reply('Welcome', getMainMenu())
+        ctx.replyWithHTML('Welcome!\n\n', getMainMenu())
     }) //ответ бота на команду /start
 
     Bot.hears(ALL_ACTIVE_TASKS, ctx => {
@@ -19,7 +21,7 @@ export const App = () => {
     })
 
     Bot.hears(ADD_TASKS, ctx => {
-        ctx.reply(ADD_TASKS)
+        ctx.reply('Чтобы быстро добавить задачу, просто напишите ее и отправьте боту')
     })
 
     Bot.help((ctx) => ctx.reply('Send me a sticker')) //ответ бота на команду /help
