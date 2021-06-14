@@ -3,16 +3,28 @@
 
 import { Bot } from './bot/index.js'
 import { ALL_ACTIVE_TASKS, MY_TASKS, ADD_TASK, CHOOSE_PROJECT } from './constants/index.js'
-import { addTask } from './services/index.js'
+import { addTask, getTasks } from './services/index.js'
 import { getMainMenu, getProjects, getTaskMenu, yesNoKeyboard } from './utils/keyboards.js'
-import { session } from 'telegraf'
+// import { session } from 'telegraf'
+import session from '@telegraf/session'
+import { ADD_DATE_LIMITATION_ACTION, ADD_EXECUTOR_ACTION, ADD_PROJECT_ACTION, ADD_TASK_ACTION, SAVE_TASK_ACTION, START_SESSION_ACTION, store } from './store/index.js'
+const { dispatch, getState } = store;
+
+
 
 export const App = () => {
-    const bigTask = {}
 
     Bot.use(session())
     
     Bot.start((ctx) => {
+
+        ctx.session.status = START_SESSION_ACTION
+        // console.log(ctx.update.message.from, ctx.update.message.chat)
+        ctx.session.user = {
+            id: ctx.update.message.from.id,
+            username: ctx.update.message.username,
+            firstName: ctx.update.message.ferst_name,
+        }
         ctx.replyWithHTML('Здорова, боярин!\n Чего желаете? \n\n', getMainMenu())
     }) //ответ бота на команду /start
 
@@ -20,32 +32,150 @@ export const App = () => {
         ctx.reply(ALL_ACTIVE_TASKS)
     })
 
-    Bot.hears(ADD_TASK, ctx => {
-        ctx.reply('Чтобы быстро добавить задачу, просто напишите ее и отправьте боту', getTaskMenu())
+    Bot.hears(MY_TASKS, async ctx => {
+        const tasks = await getTasks()
+        let result = ''
+
+        tasks.forEach((item, index) => {
+            result += `[${index+1}] ${item.title || 'Не задано'}\n Исполнитель: ${item.executor || 'Не задано'}\n Срок: ${item.taskDateLimitation || 'Не задано'} \n Проект: ${item.project || 'Не задано'} \n ------------------------------ \n\n`
+        });
+
+        ctx.replyWithHTML(`<b>Список ваших задач:</b>\n\n${result}`)
     })
 
-    Bot.on('text', ctx => {
-        ctx.session.taskText = ctx.message.text
-
-        ctx.replyWithHTML(
-            `Вы действительно хотите добавить задачу:\n\n`+
-            `<i>${ctx.message.text}</i>`,
-            yesNoKeyboard()
+    Bot.hears(ADD_TASK, ctx => {
+        ctx.session.status = ADD_TASK_ACTION
+        ctx.reply(
+            'Чтобы быстро добавить задачу, просто напишите ее и отправьте боту', 
+            // getTaskMenu()
         )
     })
 
+    Bot.on('text', ctx => {
+
+        const status = ctx.session.status
+
+        switch (status) {
+            case ADD_TASK_ACTION:
+                // console.log(ctx.update.message.from, ctx.update.message.chat)
+                ctx.session.taskText = ctx.message.text
+        
+                ctx.replyWithHTML(
+                    `Вы действительно хотите добавить задачу:\n\n`+
+                    `<i>${ctx.message.text}</i>`,
+                    yesNoKeyboard()
+                )
+                break;
+
+            case ADD_DATE_LIMITATION_ACTION:
+                ctx.session.taskDateLimitation = ctx.message.text
+
+                ctx.replyWithHTML(
+                    `Вы действительно хотите добавить к задаче срок:\n\n`+
+                    `<i>${ctx.message.text}</i>`,
+                    yesNoKeyboard()
+                )
+                break;
+
+            case ADD_EXECUTOR_ACTION:
+                ctx.session.taskExecutor = ctx.message.text
+
+                ctx.replyWithHTML(
+                    `Вы действительно хотите добавить к задаче исполнителя:\n\n`+
+                    `<i>${ctx.message.text}</i>`,
+                    yesNoKeyboard()
+                )
+                break;
+
+            case ADD_PROJECT_ACTION:
+                ctx.session.taskProject = ctx.message.text
+
+                ctx.replyWithHTML(
+                    `Вы действительно хотите добавить к задаче проект:\n\n`+
+                    `<i>${ctx.message.text}</i>`,
+                    yesNoKeyboard()
+                )
+                break;
+        
+            default:
+                ctx.reply(`Что мне с этим делать?`)
+                break;
+        }
+
+
+    })
+
     Bot.action(['yes', 'no'], ctx => {
-        if (ctx.callbackQuery.data === 'yes') {
-            addTask(ctx.session.taskText)
-            ctx.editMessageText('Ваша задача успешно добавлена')
-        } else {
-            ctx.deleteMessage()
+
+        const status = ctx.session.status
+        switch (status) {
+            case ADD_TASK_ACTION:
+                if (ctx.callbackQuery.data === 'yes') {
+                    ctx.reply(
+                        'Чтобы быстро добавить срок, просто напишите его и отправьте боту', 
+                    )
+                    ctx.session.status = ADD_DATE_LIMITATION_ACTION
+                } else {
+                    ctx.reply(
+                        'Чтобы быстро добавить задачу, просто напишите ее и отправьте боту', 
+                    )
+                }
+                break;
+
+            case ADD_DATE_LIMITATION_ACTION:
+                if (ctx.callbackQuery.data === 'yes') {
+                    ctx.reply(
+                        'Чтобы быстро добавить исполнителя, просто напишите его и отправьте боту', 
+                    )
+                    ctx.session.status = ADD_EXECUTOR_ACTION
+                } else {
+                    ctx.reply(
+                        'Чтобы быстро добавить срок, просто напишите его и отправьте боту', 
+                    )
+                }
+                break;
+
+            case ADD_EXECUTOR_ACTION:
+                if (ctx.callbackQuery.data === 'yes') {
+                    ctx.reply(
+                        'Чтобы быстро добавить проект, просто напишите его и отправьте боту', 
+                    )
+                    ctx.session.status = ADD_PROJECT_ACTION
+                } else {
+                    ctx.reply(
+                        'Чтобы быстро добавить исполнителя, просто напишите его и отправьте боту', 
+                    )
+                }
+                break;
+
+            case ADD_PROJECT_ACTION:
+                if (ctx.callbackQuery.data === 'yes') {
+                    addTask({
+                        title: ctx.session.taskText,
+                        user: ctx.session.user,
+                        project: ctx.session.taskProject,
+                        executor: ctx.session.taskExecutor,
+                        date: ctx.session.taskDateLimitation
+                    })
+                    ctx.editMessageText('Ваша задача успешно добавлена')
+                    ctx.session.status = SAVE_TASK_ACTION
+                    // ctx.reply(
+                    //     'Чтобы быстро добавить проект, просто напишите его и отправьте боту', 
+                    // )
+                    // ctx.session.status = SAVE_TASK_ACTION
+                } else {
+                    ctx.reply(
+                        'Чтобы быстро добавить проект, просто напишите его и отправьте боту', 
+                    )
+                }
+                break;                
+
+            default:
+                break;
         }
     })
 
-    Bot.hears(MY_TASKS, ctx => {
-        ctx.reply(MY_TASKS)
-    })
+
 
     Bot.hears(CHOOSE_PROJECT, ctx => {
         ctx.reply('Выбери проект: \n', getProjects())

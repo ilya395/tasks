@@ -4,7 +4,7 @@ import { ADD_TASK, ALL_ACTIVE_TASKS, CHOOSE_END_DATE, CHOOSE_EXECUTOR, CHOOSE_PR
 
 export function getMainMenu() {
     return Markup.keyboard([ // строки кнопок
-        [ALL_ACTIVE_TASKS],
+        // [ALL_ACTIVE_TASKS],
         [MY_TASKS, ADD_TASK],
     ])
         .resize() // размерность кнопок
