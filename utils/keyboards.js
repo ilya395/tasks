@@ -1,11 +1,12 @@
 import { Markup } from 'telegraf'
-import { ADD_TASK, ALL_ACTIVE_TASKS, CHOOSE_END_DATE, CHOOSE_EXECUTOR, CHOOSE_PROJECT, MY_TASKS } from '../constants/index.js'
+import { ADD_TASK, ALL_ACTIVE_TASKS, CHOOSE_END_DATE, CHOOSE_EXECUTOR, CHOOSE_PROJECT, CLOSE_TASK, MY_TASKS } from '../constants/index.js'
 // const Markup = require('telegraf/markup.js')
 
 export function getMainMenu() {
     return Markup.keyboard([ // строки кнопок
         // [ALL_ACTIVE_TASKS],
         [MY_TASKS, ADD_TASK],
+        [ALL_ACTIVE_TASKS, CLOSE_TASK],
     ])
         .resize() // размерность кнопок
         // .extra() // отобразить клаву
@@ -33,4 +34,8 @@ export function getProjects() {
         ['Назад'],
 
     ])
+}
+
+export function deleteTask() {
+    
 }

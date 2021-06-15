@@ -2,12 +2,12 @@
 // const { getMainMenu } = require('./utils/keyboards');
 
 import { Bot } from './bot/index.js'
-import { ALL_ACTIVE_TASKS, MY_TASKS, ADD_TASK, CHOOSE_PROJECT } from './constants/index.js'
+import { ALL_ACTIVE_TASKS, MY_TASKS, ADD_TASK, CHOOSE_PROJECT, OPEN_TASK_STATUS, CLOSE_TASK, CLOSE_TASK_STATUS } from './constants/index.js'
 import { addTask, getTasks } from './services/index.js'
 import { getMainMenu, getProjects, getTaskMenu, yesNoKeyboard } from './utils/keyboards.js'
 // import { session } from 'telegraf'
 import session from '@telegraf/session'
-import { ADD_DATE_LIMITATION_ACTION, ADD_EXECUTOR_ACTION, ADD_PROJECT_ACTION, ADD_TASK_ACTION, SAVE_TASK_ACTION, START_SESSION_ACTION, store } from './store/index.js'
+import { ADD_DATE_LIMITATION_ACTION, ADD_EXECUTOR_ACTION, ADD_PROJECT_ACTION, ADD_TASK_ACTION, CLOSE_TASK_ACTION, SAVE_TASK_ACTION, START_SESSION_ACTION, store } from './store/index.js'
 const { dispatch, getState } = store;
 
 
@@ -28,23 +28,77 @@ export const App = () => {
         ctx.replyWithHTML('Здорова, боярин!\n Чего желаете? \n\n', getMainMenu())
     }) //ответ бота на команду /start
 
-    Bot.hears(ALL_ACTIVE_TASKS, ctx => {
-        ctx.reply(ALL_ACTIVE_TASKS)
-    })
-
     Bot.hears(MY_TASKS, async ctx => {
         const tasks = await getTasks()
         let result = ''
 
-        tasks.forEach((item, index) => {
-            result += `[${index+1}] ${item.title || 'Не задано'}\n Исполнитель: ${item.executor || 'Не задано'}\n Срок: ${item.taskDateLimitation || 'Не задано'} \n Проект: ${item.project || 'Не задано'} \n ------------------------------ \n\n`
-        });
+        const myTasks = tasks.filter(item => item.user.id === ctx.update.message.from.id)
 
-        ctx.replyWithHTML(`<b>Список ваших задач:</b>\n\n${result}`)
+        if (myTasks.length) {
+            myTasks.forEach((item) => {
+                result += `[${item.id}] ${item.title || 'Не задано'}\n
+                Исполнитель: ${item.executor || 'Не задано'}\n
+                Срок: ${item.taskDateLimitation || 'Не задано'}\n
+                Проект: ${item.project || 'Не задано'}\n
+                Статус: ${item.taskStatus}\n
+                ------------------------------\n\n`
+            });
+            ctx.replyWithHTML(`<b>Список ваших задач:</b>\n\n${result}`)
+        } else {
+            ctx.replyWithHTML(`<b>Нет задач</b>\n`)
+        }
+    })
+
+    Bot.hears(ALL_ACTIVE_TASKS, async ctx => {
+        const tasks = await getTasks()
+        let result = ''
+
+        const activeTasks = tasks.filter(item => item.taskStatus === OPEN_TASK_STATUS)
+
+        if (activeTasks.length > 0) {
+            activeTasks.forEach((item) => {
+                result += `
+                [${item.id}] ${item.title || 'Не задано'}\n
+                Исполнитель: ${item.executor || 'Не задано'}\n
+                Срок: ${item.taskDateLimitation || 'Не задано'}\n
+                Проект: ${item.project || 'Не задано'}\n
+                Статус: ${item.taskStatus}\n
+                ------------------------------ \n\n`
+            });
+    
+            ctx.replyWithHTML(`<b>Список активных задач:</b>\n\n${result}`)
+        } else {
+            ctx.replyWithHTML(`<b>Нет активных задач</b>\n`)
+        }
+
+    })
+
+    Bot.hears(CLOSE_TASK, async ctx => {
+        const tasks = await getTasks()
+        let result = ''
+
+        const myTasks = tasks.filter(item => (item.user.id === ctx.update.message.from.id) && item.taskStatus === OPEN_TASK_STATUS)
+
+        if (myTasks.length > 0) {
+            myTasks.forEach(item => {
+                result += `[${item.id}] ${item.title || 'Не задано'}\n
+                ------------------------------\n\n`
+            });
+            ctx.replyWithHTML(`<b>Список ваших задач:</b>\n\n${result}`)
+            ctx.replyWithHTML(`Чтобы быстро закрыть задачу, просто напишите ее id и отправьте боту`)
+            ctx.session.status = CLOSE_TASK_ACTION
+        } else {
+            ctx.replyWithHTML(`<b>Нет задач</b>\n`)
+        }
     })
 
     Bot.hears(ADD_TASK, ctx => {
         ctx.session.status = ADD_TASK_ACTION
+        ctx.session.user = {
+            id: ctx.update.message.from.id,
+            username: ctx.update.message.username,
+            firstName: ctx.update.message.ferst_name,
+        }
         ctx.reply(
             'Чтобы быстро добавить задачу, просто напишите ее и отправьте боту', 
             // getTaskMenu()
@@ -96,6 +150,16 @@ export const App = () => {
                     yesNoKeyboard()
                 )
                 break;
+
+            case CLOSE_TASK_ACTION:
+                ctx.session.closingTaskId = ctx.message.text
+
+                ctx.replyWithHTML(
+                    `Вы действительно хотите закрыть задачу:\n\n`+
+                    `<i>${ctx.message.text}</i>`,
+                    yesNoKeyboard()
+                )
+                break;
         
             default:
                 ctx.reply(`Что мне с этим делать?`)
@@ -105,7 +169,7 @@ export const App = () => {
 
     })
 
-    Bot.action(['yes', 'no'], ctx => {
+    Bot.action(['yes', 'no'], async ctx => {
 
         const status = ctx.session.status
         switch (status) {
@@ -151,11 +215,13 @@ export const App = () => {
             case ADD_PROJECT_ACTION:
                 if (ctx.callbackQuery.data === 'yes') {
                     addTask({
+                        id: Date.now(),
                         title: ctx.session.taskText,
                         user: ctx.session.user,
                         project: ctx.session.taskProject,
                         executor: ctx.session.taskExecutor,
-                        date: ctx.session.taskDateLimitation
+                        date: ctx.session.taskDateLimitation,
+                        taskStatus: OPEN_TASK_STATUS
                     })
                     ctx.editMessageText('Ваша задача успешно добавлена')
                     ctx.session.status = SAVE_TASK_ACTION
@@ -168,7 +234,29 @@ export const App = () => {
                         'Чтобы быстро добавить проект, просто напишите его и отправьте боту', 
                     )
                 }
-                break;                
+                break;  
+                
+            case CLOSE_TASK_ACTION:
+                if (ctx.callbackQuery.data === 'yes') {
+
+                    const tasks = await getTasks()
+                    let result = ''
+            
+                    const myTask = tasks.find(item => +item.id === +ctx.session.closingTaskId)
+                    // console.log(myTask)
+                    myTask.taskStatus = CLOSE_TASK_STATUS
+
+                    ctx.reply(
+                        'Задача закрыта', 
+                    )
+                    ctx.session.status = START_SESSION_ACTION
+                } else {
+                    ctx.reply(
+                        'Не будем закрывать задачу', 
+                    )
+                    ctx.session.status = START_SESSION_ACTION
+                }
+                break;
 
             default:
                 break;

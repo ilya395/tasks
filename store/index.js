@@ -7,6 +7,7 @@ export const ADD_PROJECT_ACTION = "ADD_PROJECT_ACTION"
 export const CANCEL_TASK_ACTION = "CANCEL_TASK_ACTION"
 // export const CONFIRMATION_TASK_ACTION = "CONFIRMATION_TASK_ACTION"
 export const SAVE_TASK_ACTION = "SAVE_TASK_ACTION"
+export const CLOSE_TASK_ACTION = "CLOSE_TASK_ACTION"
 
 function createStore(reducer, initialState) {
     let state = initialState;
