@@ -14,7 +14,15 @@ export function addTask(object) {
 export function getTasks() {
     return new Promise(resolve => {
         setTimeout(() => {
+            // const tasks = taskList.filter(item => item.taskStatus === OPEN_TASK_STATUS)
             resolve(taskList)
         }, 500)
     })
+}
+
+export function updateTasks(object) {
+    taskList = [
+        ...taskList,
+        object
+    ];
 }

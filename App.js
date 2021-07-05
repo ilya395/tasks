@@ -3,7 +3,7 @@
 
 import { Bot } from './bot/index.js'
 import { ALL_ACTIVE_TASKS, MY_TASKS, ADD_TASK, CHOOSE_PROJECT, OPEN_TASK_STATUS, CLOSE_TASK, CLOSE_TASK_STATUS } from './constants/index.js'
-import { addTask, getTasks } from './services/index.js'
+import { addTask, getTasks, updateTasks } from './services/index.js'
 import { getMainMenu, getProjects, getTaskMenu, yesNoKeyboard } from './utils/keyboards.js'
 // import { session } from 'telegraf'
 import session from '@telegraf/session'
@@ -32,7 +32,7 @@ export const App = () => {
         const tasks = await getTasks()
         let result = ''
 
-        const myTasks = tasks.filter(item => item.user.id === ctx.update.message.from.id)
+        const myTasks = tasks.filter(item => item.user.id === ctx.update.message.from.id && item.taskStatus === OPEN_TASK_STATUS)
 
         if (myTasks.length) {
             myTasks.forEach((item) => {
@@ -240,11 +240,12 @@ export const App = () => {
                 if (ctx.callbackQuery.data === 'yes') {
 
                     const tasks = await getTasks()
-                    let result = ''
             
                     const myTask = tasks.find(item => +item.id === +ctx.session.closingTaskId)
                     // console.log(myTask)
                     myTask.taskStatus = CLOSE_TASK_STATUS
+
+                    updateTasks(myTask)
 
                     ctx.reply(
                         'Задача закрыта', 
