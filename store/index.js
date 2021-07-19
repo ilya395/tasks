@@ -4,6 +4,7 @@ export const GET_TASKS_ACTION = "GET_TASKS_ACTION"
 export const ADD_EXECUTOR_ACTION = "ADD_EXECUTOR_ACTION"
 export const ADD_DATE_LIMITATION_ACTION = "ADD_DATE_LIMITATION_ACTION"
 export const ADD_PROJECT_ACTION = "ADD_PROJECT_ACTION"
+export const ADD_CHOOSED_PROJECT_ACTION = "ADD_CHOOSED_PROJECT_ACTION";
 export const CANCEL_TASK_ACTION = "CANCEL_TASK_ACTION"
 // export const CONFIRMATION_TASK_ACTION = "CONFIRMATION_TASK_ACTION"
 export const SAVE_TASK_ACTION = "SAVE_TASK_ACTION"
@@ -42,8 +43,8 @@ function defaultReducer(state, action) {
         case ADD_PROJECT_ACTION:
             return {
                 status: ADD_PROJECT_ACTION,
-            }            
-    
+            }
+
         default:
             return {...state}
     }
