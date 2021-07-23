@@ -1,12 +1,9 @@
 import { Bot } from './bot/index.js'
 import { ALL_ACTIVE_TASKS, MY_TASKS, ADD_TASK, CHOOSE_PROJECT, CLOSE_TASK } from './constants/index.js'
-import { addTask, getTasks, updateTasks } from './services/index.js'
-import { getMainMenu, getProjects, getTaskMenu, projectKeybord, yesNoKeyboard } from './utils/keyboards.js'
+import { getMainMenu, projectKeybord, yesNoKeyboard } from './utils/keyboards.js'
 import session from '@telegraf/session'
 import { ADD_CHOOSED_PROJECT_ACTION, ADD_DATE_LIMITATION_ACTION, ADD_EXECUTOR_ACTION, ADD_PROJECT_ACTION, ADD_TASK_ACTION, CLOSE_TASK_ACTION, SAVE_TASK_ACTION, START_SESSION_ACTION } from './store/index.js'
 import { projectController, tasksController, userController } from './controllers/index.js';
-
-
 
 export const App = () => {
 
@@ -86,7 +83,6 @@ export const App = () => {
     })
 
     Bot.hears(CLOSE_TASK, async ctx => {
-        const tasks = await getTasks()
         let result = ''
 
         const myTasks = await tasksController.getAllActiveTasks();
@@ -106,14 +102,8 @@ export const App = () => {
 
     Bot.hears(ADD_TASK, ctx => {
         ctx.session.status = ADD_TASK_ACTION
-        // ctx.session.user = {
-        //     telegram_id: ctx.update.message.from.id,
-        //     username: ctx.update.message.username,
-        //     firstName: ctx.update.message.ferst_name,
-        // }
         ctx.reply(
             'Чтобы быстро добавить задачу, просто напишите ее и отправьте боту',
-            // getTaskMenu()
         )
     })
 
@@ -232,7 +222,6 @@ export const App = () => {
           case ADD_PROJECT_ACTION:
             if (ctx.callbackQuery.data === 'yes') {
               const data = {
-                // id: Date.now(),
                 title: ctx.session.taskText,
                 user: ctx.session.user.id,
                 project: ctx.session.taskProjectId,
@@ -242,9 +231,6 @@ export const App = () => {
               }
               const res = tasksController.addTask({
                 ...data,
-                // user_id,
-                // project_id,
-                // status_id
               })
               ctx.editMessageText('Ваша задача успешно добавлена')
               ctx.session.status = SAVE_TASK_ACTION
@@ -258,7 +244,6 @@ export const App = () => {
           case ADD_CHOOSED_PROJECT_ACTION:
               if (ctx.callbackQuery.data === 'yes') {
                   const data = {
-                      // id: Date.now(),
                       title: ctx.session.taskText,
                       user: ctx.session.user.id,
                       project: ctx.session.taskProjectId,
@@ -267,20 +252,12 @@ export const App = () => {
                       taskStatus: 2, // OPEN_TASK_STATUS
                   }
 
-                  // const projects = await projectController.getProjects();
                   const res = tasksController.addTask({
                     ...data,
-                    // user_id,
-                    // project_id,
-                    // status_id
                   })
 
                   ctx.editMessageText('Ваша задача успешно добавлена')
                   ctx.session.status = SAVE_TASK_ACTION
-                  // ctx.reply(
-                  //     'Чтобы быстро добавить проект, просто напишите его и отправьте боту',
-                  // )
-                  // ctx.session.status = SAVE_TASK_ACTION
               } else {
                   ctx.reply(
                       'Чтобы быстро добавить проект, просто выбирите его',
@@ -290,11 +267,6 @@ export const App = () => {
 
           case CLOSE_TASK_ACTION:
               if (ctx.callbackQuery.data === 'yes') {
-
-                  // const tasks = await getTasks()
-                  // const myTask = tasks.find(item => +item.id === +ctx.session.closingTaskId)
-                  // myTask.taskStatus = CLOSE_TASK_STATUS
-                  // updateTasks(myTask)
 
                   tasksController.closeTask(+ctx.session.closingTaskId)
 
@@ -343,15 +315,13 @@ export const App = () => {
       }
     });
 
-
-
     Bot.hears(CHOOSE_PROJECT, ctx => {
         ctx.reply('Выбери проект: \n', projectKeybord())
     })
 
-    Bot.help((ctx) => ctx.reply('Send me a sticker')) //ответ бота на команду /help
-    Bot.on('sticker', (ctx) => ctx.reply('')) //bot.on это обработчик введенного юзером сообщения, в данном случае он отслеживает стикер, можно использовать обработчик текста или голосового сообщения
-    Bot.hears('hi', (ctx) => ctx.reply('Hey there')) // bot.hears это обработчик конкретного текста, данном случае это - "hi"
+    // Bot.help((ctx) => ctx.reply('Send me a sticker')) //ответ бота на команду /help
+    // Bot.on('sticker', (ctx) => ctx.reply('')) //bot.on это обработчик введенного юзером сообщения, в данном случае он отслеживает стикер, можно использовать обработчик текста или голосового сообщения
+    // Bot.hears('hi', (ctx) => ctx.reply('Hey there')) // bot.hears это обработчик конкретного текста, данном случае это - "hi"
 
     Bot.launch() // запуск бота
 }
